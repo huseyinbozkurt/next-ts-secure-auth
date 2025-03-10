@@ -1,8 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import styled from "styled-components";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
+const loginSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(4, "Password must be at least 4 characters"),
+});
 
 const Container = styled.div`
   display: flex;
@@ -19,6 +27,7 @@ const Card = styled.div`
   background: #fff;
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  text-align: center;
 `;
 
 const Title = styled.h2`
@@ -27,17 +36,9 @@ const Title = styled.h2`
   color: #333;
 `;
 
-const Error = styled.p`
-  color: red;
-  text-align: center;
-  background: #ffebeb;
-  padding: 10px;
-  border-radius: 5px;
-  margin-bottom: 15px;
-`;
-
 const FormGroup = styled.div`
   margin-bottom: 15px;
+  text-align: left;
 `;
 
 const Label = styled.label`
@@ -53,6 +54,12 @@ const Input = styled.input`
   border-radius: 5px;
 `;
 
+const ErrorText = styled.p`
+  color: red;
+  font-size: 12px;
+  margin-top: 5px;
+`;
+
 const Button = styled.button`
   width: 100%;
   padding: 10px;
@@ -63,26 +70,24 @@ const Button = styled.button`
   cursor: pointer;
   font-weight: bold;
   transition: background 0.3s;
+  margin-top: 15px;
 
   &:hover {
     background: #0056b3;
   }
 `;
 
-const LoginPage = () => {
+const LoginPage: React.FC = () => {
   const router = useRouter();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({ resolver: zodResolver(loginSchema) });
   const [errorMessage, setErrorMessage] = useState("");
 
-  const onSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const onSubmit = async (data: { username: string; password: string }) => {
     setErrorMessage("");
-
-    const formData = new FormData(event.target as HTMLFormElement);
-    const data = {
-      username: formData.get("username") as string,
-      password: formData.get("password") as string,
-    };
-
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -106,23 +111,29 @@ const LoginPage = () => {
     <Container>
       <Card>
         <Title>Login</Title>
-        {errorMessage && <Error>{errorMessage}</Error>}
-        <form onSubmit={onSubmit}>
+        {errorMessage && <ErrorText>{errorMessage}</ErrorText>}
+        <form onSubmit={handleSubmit(onSubmit)}>
           <FormGroup>
             <Label>Username</Label>
             <Input
               type="text"
-              name="username"
+              {...register("username")}
               placeholder="Enter your username"
             />
+            {errors.username && (
+              <ErrorText>{errors.username.message}</ErrorText>
+            )}
           </FormGroup>
           <FormGroup>
             <Label>Password</Label>
             <Input
               type="password"
-              name="password"
+              {...register("password")}
               placeholder="Enter your password"
             />
+            {errors.password && (
+              <ErrorText>{errors.password.message}</ErrorText>
+            )}
           </FormGroup>
           <Button type="submit">Sign In</Button>
         </form>
