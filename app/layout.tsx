@@ -3,8 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Provider } from "react-redux";
-import { store } from "../redux/store";
+import { StoreProvider } from "./storeProvider";
 
 import "./globals.css";
 
@@ -44,12 +43,12 @@ export default function RootLayout({
   }, [router]);
 
   return (
-    <Provider store={store}>
-      <html lang="en">
+    <StoreProvider>
+      <html lang="en" suppressHydrationWarning>
         <body className={`${geistSans.variable} ${geistMono.variable}`}>
           {children}
         </body>
       </html>
-    </Provider>
+    </StoreProvider>
   );
 }

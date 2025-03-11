@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styled from "styled-components";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useDispatch, useSelector } from "react-redux";
+import { loginUser } from "../redux/authSlice";
+import { AppDispatch, RootState } from "../redux/store";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(4, "Password must be at least 4 characters"),
+  password: z.string().min(3, "Password must be at least 3 characters"),
 });
 
 const Container = styled.div`
@@ -77,41 +79,32 @@ const Button = styled.button`
   }
 `;
 
-const LoginPage: React.FC = () => {
+const LoginPage = () => {
   const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm({ resolver: zodResolver(loginSchema) });
-  const [errorMessage, setErrorMessage] = useState("");
+  const { error } = useSelector((state: RootState) => state.auth);
 
-  const onSubmit = async (data: { username: string; password: string }) => {
-    setErrorMessage("");
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (response.ok) {
-        router.replace("/protected");
-      } else {
-        const resData = await response.json();
-        setErrorMessage(resData.message);
+  const onSubmit = (data: { username: string; password: string }) => {
+    dispatch(loginUser(data)).then(
+      (result: { meta: { requestStatus: string } }) => {
+        if (result.meta.requestStatus === "fulfilled") {
+          router.replace("/protected");
+        }
       }
-    } catch (error) {
-      console.log(error);
-      setErrorMessage("Something went wrong. Please try again.");
-    }
+    );
   };
 
   return (
     <Container>
       <Card>
         <Title>Login</Title>
-        {errorMessage && <ErrorText>{errorMessage}</ErrorText>}
+        {error && <ErrorText>{error}</ErrorText>}
         <form onSubmit={handleSubmit(onSubmit)}>
           <FormGroup>
             <Label>Username</Label>
