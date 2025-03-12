@@ -44,7 +44,7 @@ export default function RootLayout({
 
   return (
     <StoreProvider>
-      <html lang="en" suppressHydrationWarning>
+      <html lang="en">
         <body className={`${geistSans.variable} ${geistMono.variable}`}>
           {children}
         </body>

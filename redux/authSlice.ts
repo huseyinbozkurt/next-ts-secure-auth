@@ -1,77 +1,73 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 
 interface AuthState {
+  error: string;
   isAuthenticated: boolean;
   username: string | null;
-  error: string | null;
 }
 
-const initialState: AuthState = {
-  isAuthenticated: false,
-  username: null,
-  error: null,
+const loadAuthState = (): AuthState => {
+  if (typeof window !== "undefined") {
+    const storedAuth = localStorage.getItem("authState");
+    return storedAuth
+      ? JSON.parse(storedAuth)
+      : {
+          isAuthenticated: false,
+          username: null,
+          error: "",
+        };
+  }
+  return {
+    isAuthenticated: false,
+    username: null,
+    error: "",
+  };
 };
 
-// ✅ Async action to handle login API call
+const initialState: AuthState = loadAuthState();
+
 export const loginUser = createAsyncThunk(
   "auth/loginUser",
   async (
     credentials: { username: string; password: string },
     { rejectWithValue }
   ) => {
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(credentials),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        return rejectWithValue(errorData.message || "Invalid credentials");
-      }
-
-      return credentials.username; // Return username if login succeeds
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      return rejectWithValue("Something went wrong. Please try again.");
+    if (credentials.username === "user" && credentials.password === "pass") {
+      return credentials.username;
+    } else {
+      return rejectWithValue("Invalid credentials");
     }
   }
 );
 
-// ✅ Async action to handle logout API call
 export const logoutUser = createAsyncThunk("auth/logoutUser", async () => {
-  await fetch("/api/auth/logout", { method: "POST" });
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("authState");
+  }
   return null;
 });
 
 const authSlice = createSlice({
   name: "auth",
   initialState,
-  reducers: {
-    resetError: (state) => {
-      state.error = null;
-    },
-  },
+  reducers: {},
   extraReducers: (builder) => {
     builder
       .addCase(loginUser.fulfilled, (state, action: PayloadAction<string>) => {
         state.isAuthenticated = true;
         state.username = action.payload;
-        state.error = null;
-      })
-      .addCase(loginUser.rejected, (state, action) => {
-        state.isAuthenticated = false;
-        state.username = null;
-        state.error = action.payload as string;
+        if (typeof window !== "undefined") {
+          localStorage.setItem("authState", JSON.stringify(state));
+        }
       })
       .addCase(logoutUser.fulfilled, (state) => {
         state.isAuthenticated = false;
         state.username = null;
-        state.error = null;
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("authState");
+        }
       });
   },
 });
 
-export const { resetError } = authSlice.actions;
 export default authSlice.reducer;

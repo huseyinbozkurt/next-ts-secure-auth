@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styled from "styled-components";
 import { useForm } from "react-hook-form";
@@ -7,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useDispatch, useSelector } from "react-redux";
 import { loginUser } from "../redux/authSlice";
-import { AppDispatch, RootState } from "../redux/store";
+import { RootState, AppDispatch } from "../redux/store";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -81,52 +82,49 @@ const Button = styled.button`
 
 const LoginPage = () => {
   const router = useRouter();
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch: AppDispatch = useDispatch();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm({ resolver: zodResolver(loginSchema) });
-  const { error } = useSelector((state: RootState) => state.auth);
+
+  // ✅ Always call hooks at the top level, NEVER inside conditionals
+  const error = useSelector((state: RootState) => state.auth.error);
+  const [isClient, setIsClient] = useState(false);
+
+  // ✅ Ensure hydration works correctly
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const onSubmit = (data: { username: string; password: string }) => {
-    dispatch(loginUser(data)).then(
-      (result: { meta: { requestStatus: string } }) => {
-        if (result.meta.requestStatus === "fulfilled") {
-          router.replace("/protected");
-        }
-      }
-    );
+    dispatch(loginUser(data))
+      .unwrap()
+      .then(() => {
+        router.replace("/protected");
+      })
+      .catch((error) => {
+        console.error("Login failed:", error);
+      });
   };
 
   return (
     <Container>
       <Card>
         <Title>Login</Title>
-        {error && <ErrorText>{error}</ErrorText>}
+        {isClient && error && <ErrorText>{error}</ErrorText>}
         <form onSubmit={handleSubmit(onSubmit)}>
           <FormGroup>
             <Label>Username</Label>
-            <Input
-              type="text"
-              {...register("username")}
-              placeholder="Enter your username"
-            />
-            {errors.username && (
-              <ErrorText>{errors.username.message}</ErrorText>
-            )}
+            <Input type="text" {...register("username")} placeholder="Enter your username" />
+            {errors.username && <ErrorText>{errors.username.message}</ErrorText>}
           </FormGroup>
           <FormGroup>
             <Label>Password</Label>
-            <Input
-              type="password"
-              {...register("password")}
-              placeholder="Enter your password"
-            />
-            {errors.password && (
-              <ErrorText>{errors.password.message}</ErrorText>
-            )}
+            <Input type="password" {...register("password")} placeholder="Enter your password" />
+            {errors.password && <ErrorText>{errors.password.message}</ErrorText>}
           </FormGroup>
           <Button type="submit">Sign In</Button>
         </form>

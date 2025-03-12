@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import styled from "styled-components";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../redux/store";
+import { logoutUser } from "../redux/authSlice";
 
 const Container = styled.div`
   display: flex;
@@ -47,32 +50,32 @@ const Button = styled.button`
 
 const ProtectedPage = () => {
   const router = useRouter();
+  const dispatch: AppDispatch = useDispatch();
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await fetch("/api/auth/check");
-        const data = await response.json();
+    setIsClient(true);
+  }, []);
 
-        if (!response.ok || !data.isAuthenticated) {
-          router.replace("/login");
-        }
-      } catch (error) {
-        console.log(error);
-        router.replace("/login");
-      }
-    };
+  const isAuthenticated = useSelector(
+    (state: RootState) => state.auth.isAuthenticated
+  );
 
-    checkAuth();
-  }, [router]);
-
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
+  useEffect(() => {
+    if (isClient && !isAuthenticated) {
       router.replace("/login");
-    } catch (error) {
-      console.error("Logout failed", error);
     }
+  }, [isClient, isAuthenticated, router]);
+
+  const handleLogout = () => {
+    dispatch(logoutUser())
+      .unwrap()
+      .then(() => {
+        router.replace("/login");
+      })
+      .catch((error) => {
+        console.error("Logout failed:", error);
+      });
   };
 
   return (
